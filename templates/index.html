@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DDC CAD2DATA Converter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0c0e;
+      --surface:   #13151a;
+      --surface2:  #1c1f27;
+      --border:    #252830;
+      --border-hi: #353a47;
+      --accent:    #3b82f6;
+      --accent-lo: rgba(59,130,246,0.12);
+      --accent-hi: #60a5fa;
+      --green:     #22c55e;
+      --green-lo:  rgba(34,197,94,0.12);
+      --red:       #ef4444;
+      --red-lo:    rgba(239,68,68,0.12);
+      --amber:     #f59e0b;
+      --text:      #e2e8f0;
+      --text-dim:  #64748b;
+      --text-mid:  #94a3b8;
+      --radius:    10px;
+      --radius-lg: 16px;
+    }
+
+    html { font-size: 15px; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 60px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-size: 0.8rem;
+    }
+    .logo span { color: var(--text-mid); font-weight: 400; font-size: 0.85rem; margin-left: 0.2rem; }
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: var(--accent-lo);
+      color: var(--accent-hi);
+      border: 1px solid rgba(59,130,246,0.25);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    /* ── Main layout ── */
+    main {
+      width: 100%;
+      max-width: 820px;
+      padding: 2.5rem 1.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    .page-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+    .page-title em { color: var(--accent-hi); font-style: normal; }
+    .page-sub {
+      color: var(--text-mid);
+      font-size: 0.9rem;
+      margin-top: 0.4rem;
+      line-height: 1.6;
+    }
+
+    /* ── Section labels ── */
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── Converter cards ── */
+    .converter-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.6rem;
+    }
+    .conv-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 0.6rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      text-align: center;
+      user-select: none;
+    }
+    .conv-card:hover {
+      border-color: var(--border-hi);
+      background: var(--surface2);
+    }
+    .conv-card.active {
+      border-color: var(--accent);
+      background: var(--accent-lo);
+    }
+    .conv-card .icon {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 1.15rem;
+      background: var(--surface2);
+    }
+    .conv-card.active .icon { background: rgba(59,130,246,0.2); }
+    .conv-card .card-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-mid);
+      line-height: 1.35;
+    }
+    .conv-card.active .card-title { color: var(--accent-hi); }
+    .conv-card .card-ext {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      background: var(--surface2);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .conv-card.active .card-ext {
+      background: rgba(59,130,246,0.15);
+      color: var(--accent-hi);
+    }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed var(--border-hi);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      padding: 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-lo);
+    }
+    .drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-icon {
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      background: var(--surface2);
+      display: grid;
+      place-items: center;
+      font-size: 1.6rem;
+      border: 1px solid var(--border);
+    }
+    .drop-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .drop-sub {
+      font-size: 0.82rem;
+      color: var(--text-mid);
+    }
+    .drop-accepted {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      background: var(--surface2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* File selected state */
+    .file-selected {
+      background: var(--surface2);
+      border: 1.5px solid var(--border-hi);
+      border-radius: var(--radius);
+      padding: 0.8rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .file-selected .file-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .file-selected .file-info { flex: 1; min-width: 0; }
+    .file-selected .file-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-selected .file-size {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .file-clear {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .file-clear:hover { color: var(--red); background: var(--red-lo); }
+
+    /* ── Options panel ── */
+    .options-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .options-header {
+      padding: 0.9rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+      transition: background 0.15s;
+    }
+    .options-header:hover { background: var(--surface2); }
+    .options-header.open { border-color: var(--border); }
+    .options-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 500;
+      font-size: 0.88rem;
+    }
+    .options-chevron {
+      color: var(--text-dim);
+      transition: transform 0.2s;
+      font-size: 0.8rem;
+    }
+    .options-header.open .options-chevron { transform: rotate(180deg); }
+    .options-body {
+      display: none;
+      padding: 1.2rem;
+      gap: 1rem;
+      flex-direction: column;
+    }
+    .options-body.open { display: flex; }
+
+    .opt-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .opt-group-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .opt-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    /* Toggle chips */
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-hi);
+      background: var(--surface2);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-mid);
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .chip input { display: none; }
+    .chip:hover { border-color: var(--accent); color: var(--text); }
+    .chip.checked {
+      background: var(--accent-lo);
+      border-color: var(--accent);
+      color: var(--accent-hi);
+    }
+
+    /* Select dropdown */
+    .opt-select {
+      background: var(--surface2);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 32px;
+    }
+    .opt-select:focus { border-color: var(--accent); }
+    .opt-select option { background: #1c1f27; }
+
+    /* Text input */
+    .opt-input {
+      background: var(--surface2);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 7px 12px;
+      outline: none;
+      width: 100%;
+    }
+    .opt-input:focus { border-color: var(--accent); }
+    .opt-input::placeholder { color: var(--text-dim); }
+
+    /* ── Convert button ── */
+    .convert-btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      letter-spacing: -0.01em;
+    }
+    .convert-btn:hover { background: var(--accent-hi); }
+    .convert-btn:active { transform: scale(0.99); }
+    .convert-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── Status box ── */
+    .status-box {
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-start;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .status-box.success {
+      background: var(--green-lo);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: #86efac;
+    }
+    .status-box.error {
+      background: var(--red-lo);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+    }
+    .status-box .status-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .status-box .status-body { flex: 1; }
+    .status-box .status-title { font-weight: 600; margin-bottom: 0.2rem; }
+    .status-box .status-details {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: inherit;
+      opacity: 0.75;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-top: 0.4rem;
+    }
+
+    /* ── Log panel ── */
+    .log-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .log-header {
+      padding: 0.6rem 1rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .log-body {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-mid);
+      padding: 0.8rem 1rem;
+      min-height: 48px;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .log-line { display: flex; gap: 0.5rem; }
+    .log-line .ts { color: var(--text-dim); flex-shrink: 0; }
+    .log-line.ok .msg { color: var(--green); }
+    .log-line.err .msg { color: var(--red); }
+    .log-line.info .msg { color: var(--accent-hi); }
+
+    /* ── Converter status indicators ── */
+    .converter-status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .cs-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cs-badge.ok { background: var(--green-lo); color: #86efac; border: 1px solid rgba(34,197,94,0.2); }
+    .cs-badge.missing { background: var(--red-lo); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+    .cs-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ── Progress bar ── */
+    @keyframes progress-indeterminate {
+      0%   { left: -35%; right: 100%; }
+      60%  { left: 100%; right: -90%; }
+      100% { left: 100%; right: -90%; }
+    }
+    .progress-bar {
+      width: 100%;
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: progress-indeterminate 1.5s infinite;
+    }
+    .progress-bar.hidden { display: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .converter-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    DDC CAD2DATA
+    <span>/ Converter</span>
+  </div>
+  <div class="header-right">
+    <span class="badge">Windows</span>
+  </div>
+</header>
+
+<main>
+  <!-- Title -->
+  <div>
+    <h1 class="page-title">CAD / BIM → <em>Excel</em> Dönüştürücü</h1>
+    <p class="page-sub">
+      Revit, DWG, IFC veya DGN dosyanızı yükleyin; ilgili DDC converter .exe çalışır, çıktıyı indirirsiniz.<br>
+      Autodesk veya CAD lisansına gerek yok · Offline · Açık format çıktısı
+    </p>
+  </div>
+
+  <!-- Converter health check -->
+  <div>
+    <div class="section-label">Converter durumu</div>
+    <div class="converter-status" id="converterStatus">
+      <span style="font-size:0.8rem;color:var(--text-dim)">Kontrol ediliyor…</span>
+    </div>
+  </div>
+
+  <!-- 1. Converter seçimi -->
+  <div>
+    <div class="section-label">1 — Dönüştürücü seç</div>
+    <div class="converter-grid">
+      <div class="conv-card active" data-conv="revit" data-exts=".rvt,.rfa">
+        <div class="icon">🏗️</div>
+        <div class="card-title">Revit<br>→ XLSX / DAE</div>
+        <div class="card-ext">.rvt .rfa</div>
+      </div>
+      <div class="conv-card" data-conv="dwg" data-exts=".dwg">
+        <div class="icon">📐</div>
+        <div class="card-title">AutoCAD<br>→ XLSX / PDF</div>
+        <div class="card-ext">.dwg</div>
+      </div>
+      <div class="conv-card" data-conv="ifc" data-exts=".ifc">
+        <div class="icon">🧩</div>
+        <div class="card-title">IFC<br>→ XLSX / DAE</div>
+        <div class="card-ext">.ifc</div>
+      </div>
+      <div class="conv-card" data-conv="dgn" data-exts=".dgn">
+        <div class="icon">📏</div>
+        <div class="card-title">MicroStation<br>→ XLSX</div>
+        <div class="card-ext">.dgn</div>
+      </div>
+      <div class="conv-card" data-conv="rvt2ifc" data-exts=".rvt,.rfa">
+        <div class="icon">🔄</div>
+        <div class="card-title">Revit<br>→ IFC</div>
+        <div class="card-ext">.rvt .rfa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Dosya yükleme -->
+  <div>
+    <div class="section-label">2 — Dosya yükle</div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".rvt,.rfa" />
+      <div class="drop-icon">📂</div>
+      <div class="drop-title">Dosyayı buraya sürükle veya tıkla</div>
+      <div class="drop-sub">Maksimum 2 GB</div>
+      <div class="drop-accepted" id="dropAccepted">.rvt · .rfa</div>
+    </div>
+    <div class="file-selected" id="fileSelected" style="display:none;margin-top:0.6rem;">
+      <div class="file-icon" id="fileIconEl">📄</div>
+      <div class="file-info">
+        <div class="file-name" id="fileName">—</div>
+        <div class="file-size" id="fileSize">—</div>
+      </div>
+      <button class="file-clear" id="fileClearBtn" title="Dosyayı kaldır">✕</button>
+    </div>
+  </div>
+
+  <!-- 3. Seçenekler -->
+  <div>
+    <div class="section-label">3 — Seçenekler</div>
+
+    <!-- Revit options -->
+    <div class="options-panel" id="opts-revit">
+      <div class="options-header" onclick="toggleOpts(this)">
+        <div class="options-header-left">⚙️ <span>Revit dönüştürme seçenekleri</span></div>
+        <span class="options-chevron">▾</span>
+      </div>
+      <div class="options-body">
+        <div class="opt-group">
+          <div class="opt-group-label">Export modu</div>
+          <div class="opt-row">
+            <select class="opt-select" name="export_mode" id="rvt-mode">
+              <option value="basic">basic — 309 kategori</option>
+              <option value="standard" selected>standard — 724 kategori</option>
+              <option value="complete">complete — 1209 kategori (tümü)</option>
+            </select>
+          </div>
+        </div>
+        <div class="opt-group">
+          <div class="opt-group-label">Ek çıktılar</div>
+          <div class="opt-row">
+            <label class="chip" id="chip-bbox">
+              <input type="checkbox" name="bbox" /> 📦 bbox
+            </label>
+            <label class="chip" id="chip-room">
+              <input type="checkbox" name="room" /> 🚪 room
+            </label>
+            <label class="chip" id="chip-schedule">
+              <input type="checkbox" name="schedule" /> 📋 schedule
+            </label>
+            <label class="chip" id="chip-sheets2pdf">
+              <input type="checkbox" name="sheets2pdf" /> 📄 sheets → PDF
+            </label>
+          </div>
+        </div>
+        <div class="opt-group">
+          <div class="opt-group-label">Çıktı devre dışı bırak</div>
+          <div class="opt-row">
+            <label class="chip" id="chip-no_xlsx">
+              <input type="checkbox" name="no_xlsx" /> 🚫 XLSX kapalı
+            </label>
+            <label class="chip" id="chip-no_collada">
+              <input type="checkbox" name="no_collada" /> 🚫 DAE kapalı
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revit2IFC options -->
+    <div class="options-panel" id="opts-rvt2ifc" style="display:none;">
+      <div class="options-header" onclick="toggleOpts(this)">
+        <div class="options-header-left">⚙️ <span>Revit → IFC seçenekleri</span></div>
+        <span class="options-chevron">▾</span>
+      </div>
+      <div class="options-body">
+        <div class="opt-group">
+          <div class="opt-group-label">Preset</div>
+          <div class="opt-row">
+            <select class="opt-select" name="preset">
+              <option value="standard" selected>standard</option>
+              <option value="extended">extended</option>
+              <option value="custom">custom</option>
+            </select>
+          </div>
+        </div>
+        <div class="opt-group">
+          <div class="opt-group-label">Config string (opsiyonel)</div>
+          <input class="opt-input" type="text" name="config"
+            placeholder='ExportBaseQuantities=true; SitePlacement=Shared' />
+        </div>
+      </div>
+    </div>
+
+    <!-- DWG / IFC / DGN: no extra options -->
+    <div id="opts-simple" style="display:none;">
+      <p style="font-size:0.82rem;color:var(--text-dim);padding:0.2rem 0.1rem;">
+        Bu dönüştürücü için ek seçenek gerekmez. Dosyayı yükleyip dönüştür.
+      </p>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar hidden" id="progressBar"></div>
+
+  <!-- 4. Convert -->
+  <button class="convert-btn" id="convertBtn" onclick="startConvert()">
+    <span id="btnIcon">⚡</span>
+    <span id="btnText">Dönüştür &amp; İndir</span>
+  </button>
+
+  <!-- Status -->
+  <div id="statusArea"></div>
+
+  <!-- Log -->
+  <div class="log-panel" id="logPanel" style="display:none;">
+    <div class="log-header">
+      <span>Konsol çıktısı</span>
+      <span id="logTime" style="font-weight:400;"></span>
+    </div>
+    <div class="log-body" id="logBody"></div>
+  </div>
+</main>
+
+<script>
+  // ── State ──
+  let selectedConv = 'revit';
+  let selectedFile = null;
+
+  // ── Converter card seçimi ──
+  document.querySelectorAll('.conv-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.conv-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      selectedConv = card.dataset.conv;
+
+      // Dosya input accept güncelle
+      const exts = card.dataset.exts;
+      document.getElementById('fileInput').setAttribute('accept', exts);
+      document.getElementById('dropAccepted').textContent = exts.replace(/,/g, ' · ');
+
+      // Options panel güncelle
+      showOptions(selectedConv);
+
+      // Seçili dosyayı sıfırla
+      clearFile();
+
+      log('info', `Seçildi: ${card.querySelector('.card-title').textContent.replace(/\n/g,' ')} — kabul edilen: ${exts}`);
+    });
+  });
+
+  function showOptions(conv) {
+    document.getElementById('opts-revit').style.display  = conv === 'revit'   ? 'block' : 'none';
+    document.getElementById('opts-rvt2ifc').style.display = conv === 'rvt2ifc' ? 'block' : 'none';
+    document.getElementById('opts-simple').style.display  = ['dwg','ifc','dgn'].includes(conv) ? 'block' : 'none';
+  }
+
+  // ── Chip toggle ──
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cb = chip.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      chip.classList.toggle('checked', cb.checked);
+    });
+  });
+
+  // ── Options accordion ──
+  function toggleOpts(header) {
+    header.classList.toggle('open');
+    const body = header.nextElementSibling;
+    body.classList.toggle('open');
+  }
+
+  // ── Drag & Drop ──
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    const card = document.querySelector(`.conv-card[data-conv="${selectedConv}"]`);
+    const allowed = card.dataset.exts.split(',');
+    if (!allowed.includes(ext)) {
+      showStatus('error', 'Yanlış dosya türü',
+        `"${file.name}" — bu dönüştürücü için geçerli uzantılar: ${allowed.join(', ')}`);
+      return;
+    }
+    selectedFile = file;
+    document.getElementById('dropZone').style.display = 'none';
+    document.getElementById('fileSelected').style.display = 'flex';
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatBytes(file.size);
+    document.getElementById('fileIconEl').textContent = extIcon(ext);
+    clearStatus();
+    log('ok', `Dosya seçildi: ${file.name} (${formatBytes(file.size)})`);
+  }
+
+  document.getElementById('fileClearBtn').addEventListener('click', clearFile);
+  function clearFile() {
+    selectedFile = null;
+    fileInput.value = '';
+    document.getElementById('dropZone').style.display = 'flex';
+    document.getElementById('fileSelected').style.display = 'none';
+    clearStatus();
+  }
+
+  // ── Convert ──
+  async function startConvert() {
+    if (!selectedFile) {
+      showStatus('error', 'Dosya seçilmedi', 'Lütfen önce bir dosya yükleyin.');
+      return;
+    }
+
+    const btn = document.getElementById('convertBtn');
+    btn.disabled = true;
+    document.getElementById('btnIcon').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('btnText').textContent = 'Dönüştürülüyor…';
+    document.getElementById('progressBar').classList.remove('hidden');
+    clearStatus();
+
+    const form = new FormData();
+    form.append('converter', selectedConv);
+    form.append('file', selectedFile);
+
+    // Revit options
+    if (selectedConv === 'revit') {
+      form.append('export_mode', document.getElementById('rvt-mode').value);
+      ['bbox','room','schedule','sheets2pdf','no_xlsx','no_collada'].forEach(name => {
+        const cb = document.querySelector(`input[name="${name}"]`);
+        if (cb && cb.checked) form.append(name, '1');
+      });
+    }
+
+    // Revit2IFC options
+    if (selectedConv === 'rvt2ifc') {
+      const preset = document.querySelector('select[name="preset"]');
+      const config = document.querySelector('input[name="config"]');
+      if (preset) form.append('preset', preset.value);
+      if (config && config.value.trim()) form.append('config', config.value.trim());
+    }
+
+    const t0 = Date.now();
+    log('info', `Dönüştürme başlatıldı → ${selectedConv.toUpperCase()} converter`);
+
+    try {
+      const resp = await fetch('/convert', { method: 'POST', body: form });
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+
+      if (!resp.ok) {
+        const data = await resp.json();
+        log('err', `Hata: ${data.error}`);
+        showStatus('error', data.error, data.details || '');
+        return;
+      }
+
+      // Dosya indir
+      const cd = resp.headers.get('Content-Disposition') || '';
+      let filename = selectedFile.name.replace(/\.[^.]+$/, '') + '_converted';
+      const m = cd.match(/filename=(.+)/);
+      if (m) filename = m[1].replace(/['"]/g, '');
+
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+
+      log('ok', `✓ Tamamlandı! ${elapsed}s — indiriliyor: ${filename}`);
+      showStatus('success',
+        `Dönüştürme tamamlandı (${elapsed}s)`,
+        `${filename} indirildi.`);
+
+    } catch (err) {
+      log('err', `Bağlantı hatası: ${err.message}`);
+      showStatus('error', 'Sunucuya bağlanılamadı', err.message);
+    } finally {
+      btn.disabled = false;
+      document.getElementById('btnIcon').textContent = '⚡';
+      document.getElementById('btnText').textContent = 'Dönüştür & İndir';
+      document.getElementById('progressBar').classList.add('hidden');
+    }
+  }
+
+  // ── Converter health check ──
+  async function checkConverters() {
+    const el = document.getElementById('converterStatus');
+    try {
+      const data = await (await fetch('/check_converters')).json();
+      el.innerHTML = Object.entries(data).map(([key, info]) => {
+        const cls = info.found ? 'ok' : 'missing';
+        const dot = `<span class="cs-dot"></span>`;
+        const label = key.toUpperCase();
+        return `<span class="cs-badge ${cls}">${dot}${label}</span>`;
+      }).join('');
+    } catch {
+      el.innerHTML = '<span style="font-size:0.8rem;color:var(--text-dim)">Kontrol başarısız</span>';
+    }
+  }
+  checkConverters();
+
+  // ── Status helpers ──
+  function showStatus(type, title, details) {
+    const icon = type === 'success' ? '✅' : '❌';
+    const det  = details ? `<div class="status-details">${escHtml(details)}</div>` : '';
+    document.getElementById('statusArea').innerHTML =
+      `<div class="status-box ${type}">
+         <span class="status-icon">${icon}</span>
+         <div class="status-body">
+           <div class="status-title">${escHtml(title)}</div>${det}
+         </div>
+       </div>`;
+  }
+  function clearStatus() {
+    document.getElementById('statusArea').innerHTML = '';
+  }
+
+  // ── Log ──
+  const logLines = [];
+  function log(type, msg) {
+    const panel = document.getElementById('logPanel');
+    const body  = document.getElementById('logBody');
+    panel.style.display = 'block';
+    const ts = new Date().toLocaleTimeString('tr-TR', { hour12: false });
+    logLines.push(`<div class="log-line ${type}"><span class="ts">[${ts}]</span><span class="msg">${escHtml(msg)}</span></div>`);
+    body.innerHTML = logLines.join('');
+    body.scrollTop = body.scrollHeight;
+    document.getElementById('logTime').textContent = ts;
+  }
+
+  // ── Utilities ──
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+    return (b/1024/1024).toFixed(1) + ' MB';
+  }
+  function extIcon(ext) {
+    const map = { '.rvt':'🏗️', '.rfa':'🏗️', '.dwg':'📐', '.ifc':'🧩', '.dgn':'📏' };
+    return map[ext] || '📄';
+  }
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Init
+  showOptions('revit');
+  log('info', 'DDC CAD2DATA Web Converter hazır.');
+</script>
+</body>
+</html>
