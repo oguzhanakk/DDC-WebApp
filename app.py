@@ -12,8 +12,8 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024 * 1024  # 2 GB max upload
 
-# Repo root is one level above this file (DDC_WebApp/../)
-REPO_ROOT = Path(__file__).parent.parent
+# Repo root is the same folder as this file
+REPO_ROOT = Path(__file__).parent
 
 CONVERTERS = {
     "revit": {
